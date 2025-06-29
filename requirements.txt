@@ -1,5 +1,6 @@
 numpy==1.23.1
-opencv_python==4.5.1.48
+# opencv_python==4.5.1.48
+opencv-python==4.11.0.86
 # albumentations==0.5.1 --no-binary=imgaug,albumentations
 # ray>=1.0.1
 einops==0.3.0

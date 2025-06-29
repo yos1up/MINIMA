@@ -14,7 +14,8 @@ from kornia.geometry.transform import warp_perspective
 from pathlib import Path
 from tqdm import tqdm
 
-from src.utils.load_model import load_model
+# from src.utils.load_model import load_model
+from load_model import load_model
 from src.utils.metrics import estimate_pose, relative_pose_error, error_auc, symmetric_epipolar_distance_numpy, \
     epidist_prec
 from src.utils.plotting import dynamic_alpha, error_colormap, make_matching_figure
@@ -68,6 +69,7 @@ def eval_relapose(
     mkpts0 = match_res['mkpts0']
     mkpts1 = match_res['mkpts1']
     mconf = match_res['mconf']
+    print(f"{method} - Number of matches: {len(mkpts0)}")
     if len(mconf) > 0:
         conf_min = mconf.min()
         conf_max = mconf.max()
@@ -130,6 +132,7 @@ def test_relative_pose_demo(
 
     # Load method
     # matcher = eval(f"load_{method}")(args)
+    print(f"load_model args: {args}")
     matcher = load_model(method, args)
     # Eval
     eval_relapose(

@@ -118,11 +118,11 @@ class DataIOWrapper(nn.Module):
                                                        recompute_scale_factor=False)[0].bool()
             batch.update({'mask0': ts_mask_0.unsqueeze(0), 'mask1': ts_mask_1.unsqueeze(0)})
 
-        torch.cuda.synchronize()
+        if torch.cuda.is_available(): torch.cuda.synchronize()
         start = time.time()
 
         self.model(batch)
-        torch.cuda.synchronize()
+        if torch.cuda.is_available(): torch.cuda.synchronize()
         match_1 = time.time()
         match_time = match_1 - start
         # print('match time:', match_1 - start)

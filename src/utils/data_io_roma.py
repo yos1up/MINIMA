@@ -106,11 +106,11 @@ class DataIOWrapper(nn.Module):
         img0_tensor = to_pil(img0_tensor)
         img1_tensor = to_pil(img1_tensor)
 
-        torch.cuda.synchronize()
+        if torch.cuda.is_available(): torch.cuda.synchronize()
         start = time.time()
         # warp, certainty = self.model.match(img0_tensor, img1_tensor, device=self.device)
         warp, certainty = self.model.match(img0_tensor, img1_tensor, batched=False)
-        torch.cuda.synchronize()
+        if torch.cuda.is_available(): torch.cuda.synchronize()
         match_1 = time.time()
         match_time = match_1 - start
 
