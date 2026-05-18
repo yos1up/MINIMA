@@ -15,6 +15,8 @@ from types import SimpleNamespace
 import matplotlib.cm as cm
 from typing import Dict, Any, List, Optional
 import os
+import threading
+from contextlib import asynccontextmanager
 import matplotlib.cm as cm
 
 # 依存ライブラリ (同フォルダに配置されている想定)
@@ -32,7 +34,27 @@ except ModuleNotFoundError:
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 
-app = FastAPI(title="Relative Pose Estimation API")
+# method -> matcher (from_paths) のキャッシュ。サーバ起動時に preload し、
+# それ以降はリクエストごとに再ロードしない。
+_MATCHER_CACHE: Dict[str, Any] = {}
+_MATCHER_LOCK = threading.Lock()
+
+
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    """Preload matcher(s) at startup so request latency excludes model load."""
+    preload = os.getenv("PRELOAD_METHODS", "loftr")
+    for m in [s.strip() for s in preload.split(",") if s.strip()]:
+        try:
+            logger.info(f"Preloading matcher: {m}")
+            _get_matcher(m)
+            logger.info(f"Preloaded matcher: {m}")
+        except Exception:
+            logger.exception(f"Failed to preload matcher {m}")
+    yield
+
+
+app = FastAPI(title="Relative Pose Estimation API", lifespan=lifespan)
 
 ###############################################################################
 # Utility helpers
@@ -88,10 +110,25 @@ def _default_args_for(method: str) -> SimpleNamespace:
     return SimpleNamespace(**d)
 
 
-def _run_matcher(img0_path: str, img1_path: str, args: SimpleNamespace, method: str) -> Dict[str, Any]:
-    """Load matcher once and run it on two image *paths*."""
-    print(f"load_model args: {args}")
-    matcher = load_model(method, args)
+def _get_matcher(method: str):
+    """Return a cached matcher for *method*, loading it on first use."""
+    cached = _MATCHER_CACHE.get(method)
+    if cached is not None:
+        return cached
+    with _MATCHER_LOCK:
+        cached = _MATCHER_CACHE.get(method)
+        if cached is not None:
+            return cached
+        args = _default_args_for(method)
+        logger.info(f"Loading matcher (method={method}, args={args})")
+        matcher = load_model(method, args)
+        _MATCHER_CACHE[method] = matcher
+        return matcher
+
+
+def _run_matcher(img0_path: str, img1_path: str, method: str) -> Dict[str, Any]:
+    """Run cached matcher on two image *paths*."""
+    matcher = _get_matcher(method)
     return matcher(img0_path, img1_path)
 
 ###############################################################################
@@ -190,15 +227,12 @@ async def relative_pose(
     tmp0 = _make_temp_image(img0)
     tmp1 = _make_temp_image(img1)
 
-    # 3. run matcher
-    args = _default_args_for(method)
-    args.fig1, args.fig2 = tmp0, tmp1
-
+    # 3. run matcher (model is loaded once at startup and cached)
     start = time.time()
     try:
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            match_res = _run_matcher(tmp0, tmp1, args, method)
+            match_res = _run_matcher(tmp0, tmp1, method)
     except Exception as e:
         logger.exception("Matcher failed")
         raise HTTPException(status_code=500, detail=str(e))
