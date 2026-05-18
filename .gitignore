@@ -1,4 +1,7 @@
 .idea
+__pycache__/
+*.py[cod]
+server_debug/
 *.pth
 *.ckpt
 *.png
