@@ -24,6 +24,8 @@ MINIMA-LoFTR をオンデバイスで動かす最小デモ。SwiftUI + ONNX Runt
 
 ### Phase A：Xcode 環境セットアップ & 実機に "Hello World" を流す（30分〜2時間）
 
+> **開発機について**: Apple Silicon / Intel Mac どちらでも全工程同じです。Intel Mac の場合、iOS シミュレータでの推論が体感 3〜5 倍遅くなりますが（CPU エミュではなく x86_64 ネイティブで動くものの GPU/ANE 周りが弱い）、実機ビルドとデプロイは ARM64 で同一です。**性能評価は必ず実機で行ってください**（Phase D）。Intel Mac で Xcode 16 を使うには macOS Sonoma 14.5 以降が必要です。
+
 #### A-1. Xcode をインストール
 
 App Store で **Xcode** を検索してインストール（数 GB あるので時間がかかります）。
@@ -150,7 +152,7 @@ Xcode で：
 5. アプリで Image 0 / Image 1 を選択 → **Match** ボタン
 6. 30〜90 秒待つ（シミュレータは CPU のみで遅い）→ マッチ画像が表示されればここまで成功
 
-シミュレータが極端に遅いのは正常です。実機で計測しましょう。
+シミュレータが極端に遅いのは正常です（特に Intel Mac では Stage 1 だけで 5〜15 秒かかることがあります）。実機で計測しましょう。シミュレータでの動作確認だけ早めたい場合は、暫定で `mobile/export_onnx.py --img-size 320` で 320px 版を作り、`LoFTRMatcher.imgSize = 320` に変更して取り込むのも手です（精度は落ちますが Stage 1 が約 1/4 のサイズになります）。
 
 ---
 
